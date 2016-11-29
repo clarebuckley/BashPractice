@@ -1,0 +1,93 @@
+#!/bin/bash
+#This script will zip and unzip a file
+#Script name: cpc.sh
+#Written by: Clare Buckley
+
+option=$1
+source=$2
+destination=$3
+extra=$4
+
+function usageMsg() {
+# Displays message describing how to use the script
+	echo "Usage: ./cpc [-cz] [source-file] [target-directory]"
+}
+
+function checkArguments() {
+#a) Check whether the correct number of arguments are entered by checking for empty strings
+	if [[ -z $option || -z $source || -z $destination || -n $extra ]]; then
+		echo "Error: Incorrect number of arguments."
+		usageMsg
+		exit
+	fi
+}
+
+function checkExist() {
+#b) Check whether the source file exists
+	if [[ ! -f "$source" ]]; then
+		echo "Error: source file does not exist."
+		usageMsg
+	else
+	#c) Check whether target directory exists
+		if [ ! -d "$destination" ]; then
+			#Ask user's confirmation to create the directory
+			echo "Directory does not exist. Create this directory? Y/N"
+			read -r input
+			if [[ $input = "Y" || $input = "y" ]]; then
+				mkdir -p "$destination"
+				echo "$destination has been created"
+			fi
+			if [[ $input = "N" || $input = "n" ]]; then
+				echo "Directory has not been created."
+				usageMsg
+				exit
+			fi
+		fi
+	fi
+}
+
+function checkOption() {
+#d) Check whether option '-c' or '-z' has been entered
+	if [[ $option == -c || $option == -z ]]; then
+		findByExtension
+	else
+		echo "Error: First argument must be either '-c' or '-z'"
+		usageMsg
+	fi
+}
+
+function findByExtension() {
+#e) Determine whether compressing or decompressing based on source
+	# Strip: strips file to just the file name
+	strip="$(basename "$source")"
+	# Extension: shows only the file extension of the file
+	extension="${strip##*.}"
+	act
+}
+
+function act() {
+#f) Command will perform standard copy to target location if the source and directory exist
+	if [[ -f "$source" && -d "$destination" ]]; then
+		if [[ $option == -c ]]; then
+			cp "$source" "$destination"
+			echo "$source has been copied into directory $destination"
+		fi
+		#f) If the file is already zipped, it will unzip the file to the target directory
+		if [[ $extension == "gz" && $option == -z ]]; then
+			mv "$source" "$destination"			
+			gunzip "$destination/$source"
+			echo "$source was unzipped into $destination"
+		else
+		#f) If the file isn't already zipped, it will zip the file into the target directory
+			if [[ $extension != "gz" && $option == -z ]]; then
+				gzip -k "$source"
+				mv "$source.gz" "$destination"
+				echo "'gzipped' file $source.gz has been created in directory $destination"
+			fi
+		fi
+	fi
+}
+
+checkArguments
+checkExist
+checkOption
